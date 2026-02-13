@@ -7,7 +7,10 @@ A modern, secure, and beautiful bookmark manager application built with **Next.j
 ![Supabase](https://img.shields.io/badge/Supabase-Auth%20&%20DB-green)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8)
 
-## 🚀 Features
+## � Live Demo
+[**Click here to view the live application**](https://smart-bookmark-manager-psi.vercel.app/)
+
+## �🚀 Features
 
 - **Authentication**: Secure Google OAuth login via Supabase Auth.
 - **Real-time Updates**: Bookmarks sync instantly across devices using Supabase Realtime.
