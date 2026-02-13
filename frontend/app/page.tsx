@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import BookmarkList from '@/components/dashboard/bookmark-list'
 import AddBookmark from '@/components/dashboard/add-bookmark'
 import Navbar from '@/components/dashboard/navbar'
-import { Plus } from 'lucide-react'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -22,18 +21,30 @@ export default async function Home() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="flex min-h-screen flex-col bg-neutral-950 text-white">
+    <div className="min-h-screen bg-black text-zinc-100 selection:bg-indigo-500/30">
       <Navbar userEmail={user.email} />
 
-      <main className="container mx-auto max-w-5xl px-4 py-8">
-        <div className="mb-8 space-y-4">
-          <h2 className="text-3xl font-bold tracking-tight">Your Bookmarks</h2>
-          <p className="text-muted-foreground">
-            Manage your favorite links privately and securely.
+      {/* Subtle background effects */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[20%] h-[500px] w-[500px] rounded-full bg-indigo-500/5 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[20%] h-[500px] w-[500px] rounded-full bg-purple-500/5 blur-[120px]" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
+      </div>
+
+      <main className="relative z-10 container mx-auto max-w-6xl px-4 pt-28 pb-12">
+        <div className="mx-auto max-w-3xl mb-12 text-center space-y-4">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+            Manage your links
+          </h1>
+          <p className="text-lg text-zinc-400 max-w-lg mx-auto leading-relaxed">
+            A simple, intelligent way to organize your favorite websites.
+            All in one secure place.
           </p>
         </div>
 
-        <AddBookmark />
+        <div className="mx-auto max-w-2xl mb-16">
+          <AddBookmark />
+        </div>
 
         <div className="mt-8">
           <BookmarkList initialBookmarks={bookmarks || []} userId={user.id} />

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Trash2, Globe, ExternalLink } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Trash2, Globe, ExternalLink, MoreHorizontal, Copy } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 type Bookmark = {
     id: string;
@@ -18,13 +18,14 @@ export default function BookmarkList({ initialBookmarks, userId }: { initialBook
     const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks || []);
     const supabase = createClient();
 
+    // Optimistic UI updates
     useEffect(() => {
         setBookmarks(initialBookmarks);
     }, [initialBookmarks]);
 
     useEffect(() => {
         const channel = supabase
-            .channel("realtime bookmarks")
+            .channel("realtime-bookmarks")
             .on(
                 "postgres_changes",
                 {
@@ -50,63 +51,119 @@ export default function BookmarkList({ initialBookmarks, userId }: { initialBook
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [supabase]);
+    }, [supabase, userId]);
 
     const handleDelete = async (id: string) => {
-        await supabase.from("bookmarks").delete().eq("id", id);
-        // Realtime subscription will handle the UI update
-        // But for instant feedback we can also update local state optimistically
+        // Optimistic delete
+        const backup = [...bookmarks];
         setBookmarks((prev) => prev.filter((b) => b.id !== id));
+
+        const { error } = await supabase.from("bookmarks").delete().eq("id", id);
+
+        if (error) {
+            // Revert if failed
+            setBookmarks(backup);
+            console.error("Failed to delete:", error);
+        }
+    };
+
+    const getFaviconUrl = (url: string) => {
+        try {
+            const domain = new URL(url).hostname;
+            return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+        } catch {
+            return null;
+        }
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
     };
 
     if (bookmarks.length === 0) {
         return (
-            <div className="text-center py-12 text-gray-500">
-                <p>No bookmarks yet. Add one above!</p>
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 mb-4">
+                    <Globe className="h-6 w-6 text-zinc-500" />
+                </div>
+                <h3 className="text-lg font-medium text-zinc-200">No bookmarks yet</h3>
+                <p className="text-sm text-zinc-500 mt-2 max-w-sm">
+                    Add your first bookmark to get started building your collection.
+                </p>
             </div>
         );
     }
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {bookmarks.map((bookmark) => (
-                <Card
-                    key={bookmark.id}
-                    className="group relative overflow-hidden bg-white/5 border-white/10 hover:border-indigo-500/50 transition-all hover:bg-white/10 backdrop-blur-sm"
-                >
-                    <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1 space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <div className="p-2 rounded-full bg-indigo-500/20 text-indigo-400">
-                                        <Globe className="h-4 w-4" />
-                                    </div>
-                                    <h3 className="font-semibold text-lg text-white truncate pr-2">
-                                        {bookmark.title}
-                                    </h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {bookmarks.map((bookmark) => {
+                const favicon = getFaviconUrl(bookmark.url);
+
+                return (
+                    <Card
+                        key={bookmark.id}
+                        className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-white/5 bg-zinc-900/40 p-5 transition-all duration-300 hover:bg-zinc-900/80 hover:border-indigo-500/20 hover:shadow-2xl hover:shadow-indigo-500/5 backdrop-blur-sm"
+                    >
+                        <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-800/50 border border-white/5 text-zinc-400 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-colors">
+                                    {favicon ? (
+                                        <img
+                                            src={favicon}
+                                            alt=""
+                                            className="h-5 w-5 opacity-70 group-hover:opacity-100 transition-opacity"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                            }}
+                                        />
+                                    ) : null}
+                                    <Globe className={`h-5 w-5 ${favicon ? 'hidden' : ''}`} />
                                 </div>
+
+                                <div className="flex gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
+                                        onClick={() => copyToClipboard(bookmark.url)}
+                                        title="Copy URL"
+                                    >
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleDelete(bookmark.id)}
+                                        className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                        title="Delete Bookmark"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="font-medium text-zinc-200 group-hover:text-white transition-colors truncate">
+                                    {bookmark.title}
+                                </h3>
                                 <a
                                     href={bookmark.url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="text-sm text-gray-400 hover:text-indigo-400 flex items-center gap-1 transition-colors truncate block max-w-full"
+                                    className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500 group-hover:text-indigo-400 transition-colors truncate"
                                 >
-                                    {bookmark.url}
-                                    <ExternalLink className="h-3 w-3 inline" />
+                                    <span className="truncate">{new URL(bookmark.url).hostname}</span>
+                                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -translate-y-0.5" />
                                 </a>
                             </div>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(bookmark.id)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
                         </div>
-                    </CardContent>
-                </Card>
-            ))}
+
+                        {/* Decorative bottom gradient highlight */}
+                        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-indigo-500/0 to-transparent group-hover:via-indigo-500/50 transition-all duration-500" />
+                    </Card>
+                );
+            })}
         </div>
     );
 }
