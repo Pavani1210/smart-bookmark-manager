@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
 
 export default function AddBookmark() {
     const [url, setUrl] = useState("");
     const [title, setTitle] = useState("");
     const [loading, setLoading] = useState(false);
+    const router = useRouter();
     const supabase = createClient();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -31,6 +33,7 @@ export default function AddBookmark() {
                 });
                 setUrl("");
                 setTitle("");
+                router.refresh();
             }
         } catch (error) {
             console.error("Error adding bookmark:", error);
